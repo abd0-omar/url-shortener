@@ -1,4 +1,5 @@
-use crate::routes::redirect;
+use crate::routes::{create_link, redirect, update_link};
+use axum::routing::{patch, post};
 use std::error::Error;
 
 use axum::{routing::get, Router};
@@ -35,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let app = Router::new()
         .route("/create", post(create_link))
-        .route("/:id", get(redirect))
+        .route("/:id", get(redirect).patch(update_link))
         .route("/health", get(heatlh))
         .route("/metrics", get(|| async move { metric_handler.render() }))
         .layer(TraceLayer::new_for_http())

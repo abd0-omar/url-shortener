@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16.1
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/create_tables.sql
+volumes:
+  db:
+    driver: local
+
+# docker-compose up -d 
+# the "-d" to make it run in the background
+# that's maybe the way to go when doing docker containers,
+# seems easier than the zero2prod one
+# then do:
+    # sqlx database create
+    # sqlx migrate add -r links
+    # that is a script for migrating and reverting a change

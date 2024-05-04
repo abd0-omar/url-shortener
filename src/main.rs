@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (prometheus_layer, metric_handler) = PrometheusMetricLayer::pair();
 
     let app = Router::new()
+        .route("/", get(todo!()))
         .route("/create", post(create_link))
         .route("/:id/statistics", get(get_link_statistics))
         .route_layer(middleware::from_fn_with_state(db.clone(), auth))

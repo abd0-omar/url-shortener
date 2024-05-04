@@ -9,8 +9,11 @@ use axum::{
 };
 use base64::engine::general_purpose;
 use base64::Engine;
+use metrics::counter;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use sqlx::error::ErrorKind;
+use sqlx::Error;
 use sqlx::PgPool;
 use url::Url;
 
@@ -137,8 +140,8 @@ pub async fn create_link(
         let new_link_id = generate_id();
 
         let new_link = tokio::time::timeout(
-                insert_link_timeout,
-                sqlx::query_as!(
+            insert_link_timeout,
+            sqlx::query_as!(
                 Link,
                 r#"
                 with inserted_link as (
@@ -151,7 +154,7 @@ pub async fn create_link(
                 &new_link_id,
                 &url
             )
-            .fetch_one(&pool)
+            .fetch_one(&pool),
         )
         .await
         .map_err(internal_error)?;
@@ -160,19 +163,24 @@ pub async fn create_link(
             Ok(link) => {
                 tracing::debug!("Created new link with id {} targeting {}", new_link_id, url);
 
-                return Ok(Json(link))
+                return Ok(Json(link));
             }
             Err(err) => match err {
                 Error::Database(db_err) if db_err.kind() == ErrorKind::UniqueViolation => {}
-                _ => return Err(internal_error(err))
-            }
+                _ => return Err(internal_error(err)),
+            },
         }
     }
 
-    tracing::error!("Could not persist new short link. Exhausted all retries of generating a unique id");
-    increment_counter!("saving_link_impossible_no_unique_id");
+    tracing::error!(
+        "Could not persist new short link. Exhausted all retries of generating a unique id"
+    );
+    counter!("saving_link_impossible_no_unique_id");
 
-    Err((StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".into()))
+    Err((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "Internal server error".into(),
+    ))
 }
 
 pub async fn update_link(

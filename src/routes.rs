@@ -1,12 +1,13 @@
 use crate::utils::internal_error;
+use askama::Template;
 use axum::body::Body;
 use axum::http::HeaderMap;
-use axum::Json;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use axum::{Form, Json};
 use base64::engine::general_purpose;
 use base64::Engine;
 use metrics::counter;
@@ -24,8 +25,9 @@ pub async fn health() -> impl IntoResponse {
     (StatusCode::OK, "Looking healthy")
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Template)]
 #[serde(rename_all = "camelCase")]
+#[template(path = "redirect.html")]
 pub struct Link {
     id: String,
     target_url: String,
@@ -128,8 +130,9 @@ pub async fn redirect(
 
 pub async fn create_link(
     State(pool): State<PgPool>,
-    Json(new_link): Json<LinkTarget>,
-) -> Result<Json<Link>, (StatusCode, String)> {
+    Form(new_link): Form<LinkTarget>, // Json(new_link): Json<LinkTarget>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    println!("hello");
     let url = Url::parse(&new_link.target_url)
         .map_err(|_| (StatusCode::CONFLICT, "url malformed".into()))?
         .to_string();
@@ -163,7 +166,11 @@ pub async fn create_link(
             Ok(link) => {
                 tracing::debug!("Created new link with id {} targeting {}", new_link_id, url);
 
-                return Ok(Json(link));
+                let link = Link {
+                    id: new_link_id,
+                    target_url: url,
+                };
+                return Ok(link);
             }
             Err(err) => match err {
                 Error::Database(db_err) if db_err.kind() == ErrorKind::UniqueViolation => {}
@@ -244,4 +251,17 @@ pub async fn get_link_statistics(
     tracing::debug!("Statistics for link with id {} requested", link_id);
 
     Ok(Json(statistics))
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct FormBaseTemplate {
+    title: String,
+}
+
+pub async fn index() -> impl IntoResponse {
+    let template = FormBaseTemplate {
+        title: String::from("url-shortener"),
+    };
+    template
 }

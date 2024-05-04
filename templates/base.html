@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>{% block title %}{{ title }} - My Site{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <link href="./templates/output.css" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  <!-- <h1 class="text-6xl">Hola, mundo!</h1> -->
+  <div id="content">
+    {% block content %}<p>Placeholder content</p>{% endblock %}
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block head %}
+<!-- <style> -->
+<!-- </style> -->
+{% endblock %}
+
+{% block content %}
+<h1 class="text-6xl">Url-Shortener</h1>
+<form action="/create" method="post" hx-headers='{"x-api-key": "ijhbKDJBKD"}' hx-post="/create" hx-target="#shortened_url">
+  <label for="targetUrl" class="text-2xl">Enter your url to make it tiny <input type="url" name="targetUrl"
+      placeholder="Type here" class="input input-bordered input-sm w-full max-w-xs"></label>
+</form>
+
+<div id="shortened_url">
+</div>
+{% endblock %}

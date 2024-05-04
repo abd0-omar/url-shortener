@@ -1,5 +1,5 @@
-use crate::routes::{create_link, redirect, update_link};
-use axum::routing::{patch, post};
+use crate::routes::{create_link, get_link_statistics, redirect, update_link};
+use axum::routing::post;
 use std::error::Error;
 
 use axum::{routing::get, Router};
@@ -36,6 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let app = Router::new()
         .route("/create", post(create_link))
+        .route("/:id/statistics", get(get_link_statistics))
         .route("/:id", get(redirect).patch(update_link))
         .route("/health", get(heatlh))
         .route("/metrics", get(|| async move { metric_handler.render() }))

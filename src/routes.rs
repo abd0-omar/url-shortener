@@ -17,7 +17,7 @@ use url::Url;
 const DEFAULT_CACHE_CONTROL_HEADER_VALUE: &str =
     "public, max-age=300, s-maxage=300, stale-while-revalidate=300, stale-if-error=300";
 
-pub async fn heatlh() -> impl IntoResponse {
+pub async fn health() -> impl IntoResponse {
     (StatusCode::OK, "Looking healthy")
 }
 

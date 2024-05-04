@@ -130,30 +130,49 @@ pub async fn create_link(
     let url = Url::parse(&new_link.target_url)
         .map_err(|_| (StatusCode::CONFLICT, "url malformed".into()))?
         .to_string();
-    let new_link_id = generate_id();
 
     let insert_link_timeout = tokio::time::Duration::from_millis(300);
 
-    let new_link = tokio::time::timeout(
-        insert_link_timeout,
-        sqlx::query_as!(
-            Link,
-            r#"with inserted_link as (
-            insert into links(id, target_url)
-                values($1, $2)
-                returning id, target_url
+    for _ in 1..=3 {
+        let new_link_id = generate_id();
+
+        let new_link = tokio::time::timeout(
+                insert_link_timeout,
+                sqlx::query_as!(
+                Link,
+                r#"
+                with inserted_link as (
+                    insert into links(id, target_url)
+                    values ($1, $2)
+                    returning id, target_url
+                )
+                select id, target_url from inserted_link
+                "#,
+                &new_link_id,
+                &url
+            )
+            .fetch_one(&pool)
         )
-            select id, target_url from inserted_link"#,
-            &new_link_id,
-            &url,
-        )
-        .fetch_one(&pool),
-    )
-    .await
-    .map_err(internal_error)?
-    .map_err(internal_error)?;
-    tracing::debug!("Created new link with id {} targeting {}", new_link_id, url);
-    Ok(Json(new_link))
+        .await
+        .map_err(internal_error)?;
+
+        match new_link {
+            Ok(link) => {
+                tracing::debug!("Created new link with id {} targeting {}", new_link_id, url);
+
+                return Ok(Json(link))
+            }
+            Err(err) => match err {
+                Error::Database(db_err) if db_err.kind() == ErrorKind::UniqueViolation => {}
+                _ => return Err(internal_error(err))
+            }
+        }
+    }
+
+    tracing::error!("Could not persist new short link. Exhausted all retries of generating a unique id");
+    increment_counter!("saving_link_impossible_no_unique_id");
+
+    Err((StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".into()))
 }
 
 pub async fn update_link(
